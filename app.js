@@ -58,11 +58,6 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-app.use((req, res, next) => {
-  res.locals.currentUser = req.user;
-  next();
-});
-
 app.get("/", (req, res) => res.render("index"));
 
 app.post("/sign-up", async (req, res) => {
