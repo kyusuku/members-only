@@ -6,11 +6,41 @@
     <title>Members Only</title>
   </head>
   <body>
-    <nav>
-      <ul>
-        <button type="button">New Post +</button>
-        <li><a href="/">Log Out</a></li>
-      </ul>
-    </nav>
+    <div class="homeWrapper">
+      <nav class="navbar">
+        <form action="/new-post" method="GET">
+          <button type="submit" class="newPostBtn">New Post</button>
+        </form>
+        <form action="/get-membership" method="GET">
+          <button type="submit" class="newPostBtn">Get Membership</button>
+        </form>
+        <form action="/log-out" method="GET">
+          <button type="submit" class="logOut">Log Out</button>
+        </form>
+      </nav>
+      <div class="postGrid">
+        <% if (locals.posts.length > 0) { %> <% posts.forEach((post) => { %>
+        <div class="post">
+          <% if (currentUser.membership) { %>
+          <h2><%= post.username %></h2>
+          <% } else { %>
+          <h2>Anonymous</h2>
+          <% } %>
+          <p class="postMessage"><%= post.message %></p>
+          <% if (currentUser.membership) { %>
+          <p class="postDate"><%= post.added.toDateString() %></p>
+          <% } else { %>
+          <p class="postDate" style="font-style: italic">
+            become a member to see author name and date posted
+          </p>
+          <% } %>
+        </div>
+        <% }) %> <% } else { %>
+        <div class="noPosts">
+          <p class="noPostsMessage">No posts available</p>
+        </div>
+        <% } %>
+      </div>
+    </div>
   </body>
 </html>

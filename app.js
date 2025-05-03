@@ -73,12 +73,14 @@ app.post("/sign-up", async (req, res) => {
       hashedPassword
     );
     if (!match) {
-      return res.status(400).send("Passwords do not match");
+      return res.render("index", {
+        error: "Your passwords do not match. Please try again.",
+      });
     }
-    await pool.query("INSERT INTO users (username, password) VALUES ($1, $2)", [
-      req.body.username,
-      hashedPassword,
-    ]);
+    await pool.query(
+      "INSERT INTO users (username, password, membership) VALUES ($1, $2, $3)",
+      [req.body.username, hashedPassword, false]
+    );
     res.redirect("/");
   } catch (err) {
     console.error(err);
@@ -94,8 +96,25 @@ app.post(
   })
 );
 
-app.get("/home", (req, res) => {
-  res.render("home", { user: req.user });
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.redirect("/");
+}
+
+app.get("/home", ensureAuthenticated, async (req, res) => {
+  const { rows } = await pool.query(
+    "SELECT username, message, added FROM posts"
+  );
+  const posts = rows.map((post) => {
+    return {
+      username: post.username,
+      message: post.message,
+      added: post.added,
+    };
+  });
+  res.render("home", { user: req.user, posts: posts });
 });
 
 app.get("/log-out", (req, res, next) => {
@@ -105,6 +124,45 @@ app.get("/log-out", (req, res, next) => {
     }
     res.redirect("/");
   });
+});
+
+app.get("/get-membership", (req, res) => {
+  res.render("get-membership", { user: req.user });
+});
+
+app.post("/get-membership", async (req, res) => {
+  try {
+    if (req.body.secretCode !== process.env.MEMBERSHIP_CODE) {
+      return res.render("get-membership", {
+        error: "Incorrect membership code. Please try again.",
+        user: req.user,
+      });
+    }
+    await pool.query("UPDATE users SET membership = $1 WHERE id = $2", [
+      true,
+      req.user.id,
+    ]);
+    res.redirect("/home");
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+});
+
+app.get("/new-post", (req, res) => {
+  res.render("newMessage", { user: req.user });
+});
+
+app.post("/new-post", ensureAuthenticated, async (req, res) => {
+  try {
+    await pool.query(
+      "INSERT INTO posts (username, message, added) VALUES ($1, $2, $3)",
+      [req.user.username, req.body.message, new Date().toDateString()]
+    );
+    res.redirect("/home");
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 const PORT = process.env.PORT || 3000;
